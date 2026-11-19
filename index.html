@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="es-MX">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>El Balero Roguelike — Nerdearla MX</title>
+    <meta
+      name="description"
+      content="Juego del balero tradicional mexicano con físicas en tiempo real, trucos clásicos y progresión roguelike, publicado con AWS Amplify."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-32 -32 64 64'%3E%3Crect x='-14' y='-26' width='28' height='32' rx='8' fill='%23E4007C' stroke='%232B1D14' stroke-width='3'/%3E%3Crect x='-14' y='-14' width='28' height='8' fill='%23FFC21A' stroke='%232B1D14' stroke-width='2'/%3E%3Crect x='-4' y='6' width='8' height='22' rx='3' fill='%23C9A46A' stroke='%232B1D14' stroke-width='3'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Shrikhand&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="fiesta">
+      <header class="encabezado">
+        <h1 class="titulo">El Balero Cósmico</h1>
+        <p class="subtitulo">Física libre en tiempo real · Trucos de feria · Roguelike</p>
+      </header>
+
+      <!-- Barra de estado Roguelike + Récord -->
+      <section class="tablero" aria-label="Estado de la partida">
+        <div class="stat-caja">
+          <span class="stat-etiqueta">Ronda</span>
+          <strong class="stat-valor" id="stat-ronda">1 / 6</strong>
+        </div>
+        <div class="stat-caja stat-puntos">
+          <span class="stat-etiqueta">Puntos / Meta</span>
+          <strong class="stat-valor" id="stat-puntos">0 / 300</strong>
+          <div class="barra-progreso" aria-hidden="true">
+            <div class="barra-relleno" id="barra-meta"></div>
+          </div>
+        </div>
+        <div class="stat-caja">
+          <span class="stat-etiqueta">Tiros · Racha</span>
+          <strong class="stat-valor">
+            <span id="stat-tiros">6</span> · <span class="stat-combo" id="stat-racha">x1.0</span>
+          </strong>
+        </div>
+        <button type="button" class="stat-caja stat-record" id="btn-records" title="Ver Salón de la Fama y Récords">
+          <span class="stat-etiqueta">🏆 Récord</span>
+          <strong class="stat-valor" id="stat-record">0</strong>
+        </button>
+      </section>
+
+      <!-- Controles de dificultad, gravedad, catálogo de mejoras y sonido -->
+      <section class="controles-rapidos" aria-label="Configuración de partida">
+        <div class="selector-grupo">
+          <label for="select-dificultad">Modo:</label>
+          <select id="select-dificultad" class="select-feria">
+            <option value="feria">Feria de Pueblo (Normal)</option>
+            <option value="artesano">Maestro Balerista (Difícil)</option>
+            <option value="cosmico">Caos Cósmico (Extremo)</option>
+            <option value="libre">Práctica Libre (∞)</option>
+          </select>
+        </div>
+
+        <div class="selector-grupo">
+          <label for="select-gravedad">Física:</label>
+          <select id="select-gravedad" class="select-feria">
+            <option value="auto">Por Ronda (Roguelike)</option>
+            <option value="tierra">Patio de Coyoacán (1.0g)</option>
+            <option value="feria">Feria con Viento (0.95g + Viento)</option>
+            <option value="luna">Luna de Queso (0.42g)</option>
+            <option value="jupiter">Planeta Caguama (1.65g)</option>
+            <option value="liga">Cuerda de Liga (Elástica)</option>
+            <option value="vortice">Vórtice Azteca (Variable)</option>
+          </select>
+        </div>
+
+        <button type="button" class="boton-icono boton-catalogo" id="btn-catalogo-mejoras" title="Ver todas las mejoras y qué hacen">
+          🏺 Mejoras (<span id="contador-mejoras-activas">0</span>/7)
+        </button>
+        <button type="button" class="boton-icono" id="btn-impulso" title="Dar tirón automático al barril (Espacio)">
+          ⚡ Tirón
+        </button>
+        <button type="button" class="boton-icono" id="btn-sonido" aria-pressed="true" title="Activar o silenciar sonidos">
+          🔊
+        </button>
+      </section>
+
+      <!-- Escenario principal del juego -->
+      <div class="patio" id="patio">
+        <div class="techo" aria-hidden="true"></div>
+
+        <!-- Insignia de gravedad y viento actual -->
+        <div class="hud-ambiente">
+          <span class="insignia-ambiente" id="insignia-gravedad">🌎 Patio de Coyoacán (1.0g)</span>
+          <span class="insignia-ambiente" id="insignia-viento" hidden>💨 Viento: 0</span>
+        </div>
+
+        <!-- Reliquias activas (al hacer clic abre el catálogo de mejoras) -->
+        <div class="hud-reliquias" id="hud-reliquias" aria-label="Reliquias activas"></div>
+
+        <!-- Botón flotante de Tirón para pulgar en celular -->
+        <button type="button" class="btn-tiron-movil" id="btn-tiron-movil" aria-label="Dar tirón al balero">
+          ⚡ Tirón
+        </button>
+
+        <!-- Macetas decorativas estilo Nerdearla -->
+        <svg class="maceta maceta-izquierda" viewBox="0 0 100 150" aria-hidden="true">
+          <g stroke="#2B1D14" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M40 92V32a10 10 0 0 1 20 0v60Z" fill="#3E9B4F" />
+            <path d="M40 70H30a8 8 0 0 1-8-8V48a7 7 0 0 1 14 0v8h4" fill="#3E9B4F" />
+            <path d="M60 62h8V40a7 7 0 0 1 14 0v14a8 8 0 0 1-8 8h-14" fill="#3E9B4F" />
+            <path d="M50 30v56M29 52v8M75 44v10" fill="none" stroke="#2C7A3B" stroke-width="2.5" />
+            <circle cx="50" cy="22" r="6" fill="#E4007C" />
+            <circle cx="50" cy="22" r="2" fill="#FFC21A" stroke="none" />
+            <path d="M14 92h72v12H14Z" fill="#D27A4E" />
+            <path d="M18 104h64l-8 42H26Z" fill="#C0673D" />
+          </g>
+          <path d="M24 118l6-6 6 6 6-6 6 6 6-6 6 6 6-6 6 6 6-6" fill="none" stroke="#FFF6E5" stroke-width="3" stroke-linejoin="round" />
+          <g fill="#1F4AA8"><circle cx="33" cy="130" r="3" /><circle cx="50" cy="130" r="3" /><circle cx="67" cy="130" r="3" /></g>
+        </svg>
+
+        <svg class="maceta maceta-derecha" viewBox="0 0 100 150" aria-hidden="true">
+          <g stroke="#2B1D14" stroke-width="3" stroke-linejoin="round">
+            <ellipse cx="50" cy="74" rx="16" ry="22" fill="#4FA35A" />
+            <ellipse cx="32" cy="44" rx="12" ry="17" transform="rotate(-25 32 44)" fill="#4FA35A" />
+            <ellipse cx="66" cy="38" rx="12" ry="17" transform="rotate(20 66 38)" fill="#4FA35A" />
+            <ellipse cx="24" cy="20" rx="5" ry="6" fill="#E4007C" />
+            <ellipse cx="38" cy="22" rx="5" ry="6" fill="#E4007C" />
+            <ellipse cx="74" cy="16" rx="5" ry="6" fill="#FF7A1A" />
+          </g>
+          <g fill="#2B1D14">
+            <circle cx="44" cy="66" r="1.5" /><circle cx="56" cy="74" r="1.5" /><circle cx="46" cy="84" r="1.5" />
+            <circle cx="30" cy="40" r="1.5" /><circle cx="36" cy="50" r="1.5" /><circle cx="64" cy="34" r="1.5" /><circle cx="70" cy="44" r="1.5" />
+          </g>
+          <g stroke="#2B1D14" stroke-width="3" stroke-linejoin="round">
+            <path d="M20 96h60l-6 50H26Z" fill="#FFFDF9" />
+            <path d="M16 92h68v10H16Z" fill="#1F4AA8" />
+          </g>
+          <g fill="#1F4AA8">
+            <path d="M50 108c5 6 5 10 0 14c-5-4-5-8 0-14Z" /><path d="M50 136c5-6 5-10 0-14c-5 4-5 8 0 14Z" />
+            <path d="M36 122c6-5 10-5 14 0c-4 5-8 5-14 0Z" /><path d="M64 122c-6-5-10-5-14 0c4 5 8 5 14 0Z" />
+            <circle cx="31" cy="110" r="2.5" /><circle cx="69" cy="110" r="2.5" /><circle cx="32" cy="136" r="2.5" /><circle cx="68" cy="136" r="2.5" />
+          </g>
+          <circle cx="50" cy="122" r="3" fill="#FFC21A" />
+        </svg>
+
+        <!-- Lienzo interactivo de física del balero -->
+        <canvas id="lienzo" class="lienzo" width="880" height="540" aria-label="Área de juego del balero"></canvas>
+
+        <!-- Capa para efectos y confeti -->
+        <div class="capa" id="capa" aria-hidden="true"></div>
+
+        <p class="verso" id="verso">Lanza el barril por encima de la punta libre y ensártalo al caer</p>
+
+        <!-- Modal Roguelike: Elección de Reliquia al superar ronda -->
+        <div class="modal" id="modal-reliquia" hidden>
+          <p class="mensaje" id="titulo-modal-reliquia">¡Ronda Superada!</p>
+          <p class="resumen" id="subtitulo-modal-reliquia">
+            Elige 1 artesanía mágica para mejorar tu balero antes de la siguiente gravedad:
+          </p>
+          <div class="tarjetas-reliquias" id="contenedor-reliquias"></div>
+        </div>
+
+        <!-- Modal de Catálogo Completo de Mejoras (Artesanías) -->
+        <div class="modal" id="modal-catalogo" hidden>
+          <p class="mensaje">🏺 Catálogo de Mejoras</p>
+          <p class="resumen">
+            Al superar cada ronda podrás elegir 1 de estas 7 artesanías mágicas. Aquí puedes consultar qué hace cada una:
+          </p>
+          <div class="lista-catalogo-mejoras" id="lista-catalogo-mejoras"></div>
+          <div class="acciones-final">
+            <button class="boton" id="btn-cerrar-catalogo" type="button">Volver al juego</button>
+          </div>
+        </div>
+
+        <!-- Modal de Fin de Partida / Victoria + Registro de Récord -->
+        <div class="modal" id="modal-final" hidden>
+          <p class="mensaje" id="titulo-final">¡Maestro del Balero!</p>
+          <p class="resumen" id="resumen-final"></p>
+
+          <form class="form-record" id="form-record" hidden>
+            <label for="input-nombre-record" class="etiqueta-record">🎉 ¡Registra tu puntaje en el Salón de la Fama!</label>
+            <div class="fila-record">
+              <input
+                type="text"
+                id="input-nombre-record"
+                class="input-feria"
+                maxlength="16"
+                placeholder="Tu apodo o iniciales"
+                autocomplete="off"
+              />
+              <button type="submit" class="boton boton-chico">Guardar</button>
+            </div>
+          </form>
+
+          <div class="acciones-final">
+            <button class="boton" id="btn-reiniciar" type="button">Jugar nueva partida</button>
+            <button class="boton boton-secundario" id="btn-ver-records-final" type="button">🏆 Ver Récords</button>
+          </div>
+        </div>
+
+        <!-- Modal de Salón de la Fama (Top 8 Puntajes Registrados) -->
+        <div class="modal" id="modal-records" hidden>
+          <p class="mensaje">🏆 Salón de la Fama</p>
+          <p class="resumen">Los mejores baleristas registrados en este dispositivo:</p>
+          <div class="tabla-records-contenedor" id="lista-records"></div>
+          <div class="acciones-final">
+            <button class="boton" id="btn-cerrar-records" type="button">Seguir jugando</button>
+            <button class="boton boton-secundario" id="btn-borrar-records" type="button">Borrar récords</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guía rápida de trucos y multiplicadores -->
+      <section class="guia-trucos" aria-label="Guía de trucos del balero">
+        <div class="truco-chip" id="chip-sencillo">
+          <span class="truco-nombre">🎯 Sencillo</span>
+          <span class="truco-pts">100 · x1</span>
+        </div>
+        <div class="truco-chip" id="chip-capirucho">
+          <span class="truco-nombre">⚡ Capirucho</span>
+          <span class="truco-pts">180 · x2</span>
+        </div>
+        <div class="truco-chip" id="chip-invertido">
+          <span class="truco-nombre">🚀 Invertido</span>
+          <span class="truco-pts">240 · x2.5</span>
+        </div>
+        <div class="truco-chip" id="chip-vuelta">
+          <span class="truco-nombre">🌀 Vuelta 360°</span>
+          <span class="truco-pts">320 · x3</span>
+        </div>
+        <div class="truco-chip" id="chip-remolino">
+          <span class="truco-nombre">🌪️ Remolino</span>
+          <span class="truco-pts">450 · x4+</span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="pie">
+      Publicado con AWS Amplify desde Nerdearla México · El Balero Roguelike
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
